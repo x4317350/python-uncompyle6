@@ -226,7 +226,6 @@ class Python27Parser(Python2Parser):
                         return_if_stmt ::= ret_expr RETURN_END_IF come_froms
                         """, nop_func)
 
-
         super(Python27Parser, self).customize_grammar_rules(tokens, customize)
 
         # FIXME: Put more in this table
@@ -356,6 +355,7 @@ class Python27Parser(Python2Parser):
 
 class Python27ParserSingle(Python27Parser, PythonParserSingle):
     pass
+
 
 if __name__ == "__main__":
     # Check grammar

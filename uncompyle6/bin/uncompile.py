@@ -193,10 +193,14 @@ def main_bin():
             result = main(src_base, out_base, pyc_paths, source_paths, outfile,
                           **options)
             result = list(result) + [options.get('do_verify', None)]
+            (tot_files, okay_files, failed_files, verify_failed_files, blah) = result
             if len(pyc_paths) > 1:
                 mess = status_msg(do_verify, *result)
                 print('# ' + mess)
                 pass
+            else:
+                if tot_files == 1 and failed_files > 0:
+                    sys.exit(-1)
         except (KeyboardInterrupt):
             pass
         except verify.VerifyCmpError:

@@ -39,7 +39,8 @@ from copy import copy
 
 from xdis import code2num, iscode, op_has_argument, instruction_size
 from xdis.bytecode import _get_const_info
-
+from xdis.opcodes.base import def_op, finalize_opcodes, init_opdata, update_pj3
+import uncompyle6.scanners.opcode_27_neox as opcode_27_neox
 from uncompyle6 import PYTHON3
 
 if PYTHON3:
@@ -51,6 +52,10 @@ from uncompyle6.scanner import Scanner, Token
 class Scanner2(Scanner):
     def __init__(self, version, show_asm=None, is_pypy=False):
         Scanner.__init__(self, version, show_asm, is_pypy)
+
+        self.opc = opcode_27_neox
+        self.opname = self.opc.opname
+
         self.pop_jump_if = frozenset([self.opc.PJIF, self.opc.PJIT])
         self.jump_forward = frozenset([self.opc.JUMP_ABSOLUTE, self.opc.JUMP_FORWARD])
         # This is the 2.5+ default
@@ -273,6 +278,7 @@ class Scanner2(Scanner):
             i = self.next_stmt[i]
 
         extended_arg = 0
+        offset_adjust = 0
         for offset in self.op_range(0, codelen):
             if offset in jump_targets:
                 jump_idx = 0
@@ -314,6 +320,22 @@ class Scanner2(Scanner):
             if has_arg:
                 oparg = self.get_argument(offset) + extended_arg
                 extended_arg = 0
+                if op == self.opc.LOAD_VAR_ZERO_LOAD_CONST:
+                    pattr = varnames[0]
+                    linestart = self.linestarts.get(offset, None)
+                    tokens.append(
+                        Token(
+                            "LOAD_FAST", pattr, pattr, offset + offset_adjust, linestart, op, has_arg, self.opc
+                        )
+                    )
+
+                    pattr = co.co_consts[oparg]
+                    offset_adjust += 3
+                    tokens.append(
+                        Token(
+                            "LOAD_CONST", pattr, pattr, offset + offset_adjust, linestart, op, has_arg, self.opc
+                        )
+                    )
                 if op == self.opc.EXTENDED_ARG:
                     extended_arg += self.extended_arg_val(oparg)
                     continue
@@ -436,27 +458,28 @@ class Scanner2(Scanner):
 
             linestart = self.linestarts.get(offset, None)
 
-            if offset not in replace:
-                tokens.append(
-                    Token(
-                        op_name, oparg, pattr, offset, linestart, op, has_arg, self.opc
+            if op != self.opc.LOAD_VAR_ZERO_LOAD_CONST:
+                if offset not in replace:
+                    tokens.append(
+                        Token(
+                            op_name, oparg, pattr, offset + offset_adjust, linestart, op, has_arg, self.opc
+                        )
                     )
-                )
-            else:
-                tokens.append(
-                    Token(
-                        replace[offset],
-                        oparg,
-                        pattr,
-                        offset,
-                        linestart,
-                        op,
-                        has_arg,
-                        self.opc,
+                else:
+                    tokens.append(
+                        Token(
+                            replace[offset],
+                            oparg,
+                            pattr,
+                            offset + offset_adjust,
+                            linestart,
+                            op,
+                            has_arg,
+                            self.opc,
+                        )
                     )
-                )
+                    pass
                 pass
-            pass
 
         if show_asm in ("both", "after"):
             for t in tokens:

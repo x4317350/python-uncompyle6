@@ -2,6 +2,8 @@
 
 |packagestatus|
 
+**This is probably not what you are looking for, this is just a fork I needed to modify so I can add new opcodes which are used in modified Python implementations**
+
 uncompyle6
 ==========
 
