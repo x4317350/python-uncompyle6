@@ -424,7 +424,7 @@ class SourceWalker(GenericASTTraversal, object):
             "is_lambda": is_lambda,
         }
         self.preorder(node)
-        self.f.write("\n" * self.pending_newlines)
+        self.f.write(u"\n" * self.pending_newlines)
         result = self.f.getvalue()
         self.params = self.param_stack.pop()
         self.pending_newlines = p
@@ -436,7 +436,7 @@ class SourceWalker(GenericASTTraversal, object):
         if not PYTHON3:
             try:
                 out = "".join((unicode(j, "utf-8") for j in data))
-            except TypeError:
+            except (TypeError, UnicodeDecodeError):
                 out = "".join((unicode(j) for j in data))
         else:
             out = "".join((str(j) for j in data))
@@ -455,7 +455,7 @@ class SourceWalker(GenericASTTraversal, object):
                 break
 
         if self.pending_newlines > 0:
-            self.f.write("\n" * self.pending_newlines)
+            self.f.write(u"\n" * self.pending_newlines)
             self.pending_newlines = 0
 
         for i in out[::-1]:
@@ -703,7 +703,13 @@ class SourceWalker(GenericASTTraversal, object):
                         self.write("u")
                     except UnicodeDecodeError:
                         self.write("u")
-                    self.write("'%s'" % data)
+                    try:
+                        self.write("'%s'" % data)
+                    except:
+                        try:
+                            self.write("'%s'" % data.decode('cp1252').encode('utf-8'))
+                        except:
+                            self.write(repr(data))
                 else:
                     try:
                         repr(data).encode("ascii")
