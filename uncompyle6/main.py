@@ -13,7 +13,7 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
-import datetime, py_compile, os, subprocess, sys, tempfile
+import datetime, py_compile, os, subprocess, sys, tempfile, io
 
 from uncompyle6 import verify, IS_PYPY, PYTHON_VERSION
 from xdis import iscode, sysinfo2float
@@ -41,7 +41,7 @@ def _get_outstream(outfile):
     except OSError:
         pass
     if PYTHON_VERSION < 3.0:
-        return open(outfile, mode="wb")
+        return io.open(outfile, mode="w", encoding="utf-8")
     else:
         return open(outfile, mode="w", encoding="utf-8")
 
@@ -77,6 +77,8 @@ def decompile(
     real_out = out or sys.stdout
 
     def write(s):
+        if PYTHON_VERSION < 3.0:
+            s = unicode(s, "utf-8")
         s += "\n"
         real_out.write(s)
 

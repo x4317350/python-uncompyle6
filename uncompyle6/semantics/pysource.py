@@ -434,7 +434,10 @@ class SourceWalker(GenericASTTraversal, object):
         if (len(data) == 0) or (len(data) == 1 and data[0] == ""):
             return
         if not PYTHON3:
-            out = "".join((unicode(j) for j in data))
+            try:
+                out = "".join((unicode(j, "utf-8") for j in data))
+            except TypeError:
+                out = "".join((unicode(j) for j in data))
         else:
             out = "".join((str(j) for j in data))
         n = 0
@@ -693,11 +696,22 @@ class SourceWalker(GenericASTTraversal, object):
                 self.write(repr(data))
         else:
             if not PYTHON3:
-                try:
-                    repr(data).encode("ascii")
-                except UnicodeEncodeError:
-                    self.write("u")
-            self.write(repr(data))
+                if isinstance(data, unicode) or isinstance(data, str):
+                    try:
+                        data.encode("ascii")
+                    except UnicodeEncodeError:
+                        self.write("u")
+                    except UnicodeDecodeError:
+                        self.write("u")
+                    self.write("'%s'" % data)
+                else:
+                    try:
+                        repr(data).encode("ascii")
+                    except UnicodeEncodeError:
+                        self.write("u")
+                    self.write(repr(data))
+            else:
+                self.write(repr(data))
         # LOAD_CONST is a terminal, so stop processing/recursing early
         self.prune()
 
@@ -2082,7 +2096,7 @@ class SourceWalker(GenericASTTraversal, object):
                         """
                         Expanding '%' in template '%s[%s]':
                         %s is invalid; has only %d entries
-                        """ % (node,kind, enty, arg, index, len(node))
+                        """ % (node, kind, enty, arg, index, len(node))
                     )
                 self.preorder(node[index])
 
@@ -2421,7 +2435,6 @@ class SourceWalker(GenericASTTraversal, object):
             # else:
             #    print stmt[-1]
 
-
         # Add "global" declaration statements at the top
         globals, nonlocals = find_globals_and_nonlocals(
             ast, set(), set(), code, self.version
@@ -2594,7 +2607,7 @@ def code_deparse(
     isTopLevel = co.co_name == "<module>"
     deparsed.ast = deparsed.build_ast(tokens, customize, co, isTopLevel=isTopLevel)
 
-    #### XXX workaround for profiling
+    # XXX workaround for profiling
     if deparsed.ast is None:
         return None
 
