@@ -70,7 +70,7 @@ def usage():
     sys.exit(1)
 
 
-def main_bin():
+def main_bin(encoding=None):
     if not (sys.version_info[0:2] in ((2, 6), (2, 7), (3, 0),
                                       (3, 1), (3, 2), (3, 3),
                                       (3, 4), (3, 5), (3, 6),
@@ -152,6 +152,9 @@ def main_bin():
         else:
             print(opt, file=sys.stderr)
             usage()
+
+    if not 'source_encoding' in options:
+        options['source_encoding'] = encoding
 
     # expand directory if specified
     if recurse_dirs:
@@ -264,6 +267,7 @@ def main_bin():
         print(time.strftime(timestampfmt))
 
     return
+
 
 if __name__ == '__main__':
     main_bin()
